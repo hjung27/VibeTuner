@@ -1,7 +1,13 @@
 import SwiftUI
+import CoreHaptics
+import CoreMotion
+
+import Combine
 
 @main
 struct ZenTunerApp: App {
+    
+
     var body: some Scene {
         WindowGroup {
             TunerScreen()

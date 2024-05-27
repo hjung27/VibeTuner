@@ -61,7 +61,9 @@ final class AudioEngine {
         try session.setPreferredIOBufferDuration(bufferDuration)
         try session.setCategory(.playAndRecord, options: [.defaultToSpeaker, .mixWithOthers])
 #endif
-        try session.setActive(true)
+        try session.setCategory(.playAndRecord, options: [.defaultToSpeaker, .mixWithOthers])
+        //try session.setActive(true)
+        try session.setAllowHapticsAndSystemSoundsDuringRecording(true)
     }
 #endif
 

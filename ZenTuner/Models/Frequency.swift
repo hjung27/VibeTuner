@@ -56,6 +56,12 @@ extension Frequency: ExpressibleByFloatLiteral {
         measurement = Measurement(value: value, unit: .hertz)
     }
 }
+extension Frequency {
+    /// Computed property to get the frequency value as a float.
+    var floatValue: Float {
+        return Float(measurement.value)
+    }
+}
 
 extension Frequency: ExpressibleByIntegerLiteral {
     init(integerLiteral value: Int) {

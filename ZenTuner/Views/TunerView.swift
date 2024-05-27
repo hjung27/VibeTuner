@@ -1,4 +1,7 @@
 import SwiftUI
+import CoreMotion
+import CoreHaptics
+import Combine
 
 struct TunerView: View {
     let tunerData: TunerData
@@ -12,6 +15,7 @@ struct TunerView: View {
     @AppStorage("HidesTranspositionMenu")
     private var hidesTranspositionMenu = false
 
+    
     var body: some View {
 #if os(watchOS)
         ZStack(alignment: Alignment(horizontal: .noteCenter, vertical: .noteTickCenter)) {
@@ -49,7 +53,13 @@ struct TunerView: View {
                 match: match,
                 modifierPreference: modifierPreference
             )
-
+//            .task{
+//                hapticManager.restartEngineIfNeeded()
+//                // TODO: Handle error
+//                hapticManager.playHapticFeedback(tuningAccuracy: Float(tunerData.pitch.floatValue))
+//                //hapticManager.playPattern()
+//                hapticManager.engineNeedsStart=true
+//                }
             MatchedNoteFrequency(frequency: tunerData.closestNote.frequency)
 
             NoteTicks(tunerData: tunerData, showFrequencyText: true)
