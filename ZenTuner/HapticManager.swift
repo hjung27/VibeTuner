@@ -12,6 +12,7 @@ import AVFoundation
 class HapticManager {
     var engine: CHHapticEngine?
     var engineNeedsStart = true
+    private var lastFeedbackTime: Date?  // Track the last time feedback was given
     
     init() {
         createAndStartHapticEngine()
@@ -69,24 +70,59 @@ class HapticManager {
         }
     }
     func playHapticFeedback(tuningAccuracy: Float) {
+        // Check if the tuning accuracy is below 1
+        if tuningAccuracy < 0.75 {
+            // Schedule haptic feedback to play after a delay (e.g., 2 seconds)
+            print (tuningAccuracy)
+            DispatchQueue.main.async {
+                Timer.scheduledTimer(timeInterval: 2.0, target: self, selector: #selector(self.triggerHapticFeedbackSuccess), userInfo: NSNumber(value: tuningAccuracy), repeats: false)
+            }
+        } else {
+            // Trigger haptic feedback immediately if tuning accuracy is 1 or above
+            triggerHapticFeedback(tuningAccuracy: tuningAccuracy)
+        }
+    }
+    @objc private func triggerHapticFeedbackSuccess(tuningAccuracy: Float){
+        let systemSoundID: SystemSoundID = 1008
+        AudioServicesPlaySystemSound(systemSoundID)
+    }
+
+    private func triggerHapticFeedback(tuningAccuracy: Float) {
         var intensity: Float = 0.5
         var sharpness: Float = 0.5
         
-        intensity = 1 - (50-abs(tuningAccuracy))/150
-        sharpness = 1 - (50-abs(tuningAccuracy))/150
-        if tuningAccuracy < 3 {
-            Timer.scheduledTimer(timeInterval: 2.0, target: self, selector: #selector(playClickFeedback), userInfo: nil, repeats: false)
-            return }
+        // Set intensity and sharpness based on your logic
+        intensity = 1
+        sharpness = 1
         
-        else {intensity = 1 - (50-abs(tuningAccuracy))/150
-            sharpness = 1 - (50-abs(tuningAccuracy))/150}
-        
-        
+        //        if tuningAccuracy < 3 {
+        //            let systemSoundID: SystemSoundID = 1008
+        //            AudioServicesPlaySystemSound(systemSoundID)
+        //        } else {
+        //            intensity = 1
+        //            sharpness = 1
+        //        }
+        var dur = 0.25
+        if (tuningAccuracy < 3) {
+            dur = 5
+        }
+        else if (tuningAccuracy < 10) {
+            dur = 4
+        }
+        else if (tuningAccuracy < 15) {
+            dur = 2
+        }
+        else if (tuningAccuracy < 20) {
+            dur = 1
+        }
+        else if (tuningAccuracy < 200) {
+            dur = 0.5
+        }
         let hapticEvent = CHHapticEvent(eventType: .hapticContinuous, parameters: [
             CHHapticEventParameter(parameterID: .hapticIntensity, value: intensity),
             CHHapticEventParameter(parameterID: .hapticSharpness, value: sharpness)
-        ], relativeTime: 0, duration: 0.1)
-        
+        ], relativeTime: 0, duration: Double(dur))
+
         do {
             let pattern = try CHHapticPattern(events: [hapticEvent], parameters: [])
             let player = try engine?.makePlayer(with: pattern)
@@ -95,6 +131,7 @@ class HapticManager {
             print("Failed to play custom haptic feedback: \(error)")
         }
     }
+
     
     @objc func playClickFeedback() {
         //guard canPlayClickFeedback else { return }

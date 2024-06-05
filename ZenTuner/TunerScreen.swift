@@ -21,7 +21,7 @@ struct TunerScreen: View {
     var body: some View {
         //createAndStartHapticEngine()
         TunerView(
-            tunerData: TunerData(pitch: pitchDetector.pitch),
+            tunerData: TunerData(pitch: pitchDetector.pitch,averagedPitch:pitchDetector.averagedPitch,averageComputed:pitchDetector.averageComputed),
             modifierPreference: modifierPreference,
             selectedTransposition: selectedTransposition
         )

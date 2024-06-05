@@ -4,7 +4,7 @@ import ZenPTrack
 public final class PitchTracker {
     private var ptrack: ZenPTrack
 
-    public static var defaultBufferSize: UInt32 { 4_096 }
+    public static var defaultBufferSize: UInt32 {8_192}
 
     public init(
         sampleRate: Double,
