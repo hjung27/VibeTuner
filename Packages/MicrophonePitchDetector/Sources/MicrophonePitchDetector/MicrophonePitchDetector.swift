@@ -15,6 +15,7 @@ public final class MicrophonePitchDetector: ObservableObject {
     @Published public var showMicrophoneAccessAlert = false
     @Published public var pitches: [Double] = []
     @Published public var averageComputed=false
+    @Published public var isPaused: Bool = false
     public init() {}
 
     @MainActor
@@ -54,4 +55,11 @@ public final class MicrophonePitchDetector: ObservableObject {
         try engine.start()
         tracker.start()
     }
+    public func pauseDetection() {
+           isPaused = true
+       }
+
+       public func resumeDetection() {
+           isPaused = false
+       }
 }

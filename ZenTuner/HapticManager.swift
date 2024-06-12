@@ -8,11 +8,20 @@
 import Foundation
 import CoreHaptics
 import AVFoundation
+import MicrophonePitchDetector
+
+enum PitchError {
+    case tooLow
+    case tooHigh
+}
 
 class HapticManager {
     var engine: CHHapticEngine?
     var engineNeedsStart = true
+    var feedbackTimer: Timer?
     private var lastFeedbackTime: Date?  // Track the last time feedback was given
+    var pitchDetector: MicrophonePitchDetector? // Reference to the pitch detector
+    private let minFeedbackInterval: TimeInterval = 2  // Minimum interval between feedbacks in seconds
     
     init() {
         createAndStartHapticEngine()
@@ -40,19 +49,19 @@ class HapticManager {
         startEngine()
     }
     //from stackexchange
-    func playPattern() {
-        do {
-            let pattern = try continuousVibration()
-            startEngine()
-            let player = try engine?.makePlayer(with: pattern)
-            try player?.start(atTime: CHHapticTimeImmediate)
-            engine?.notifyWhenPlayersFinished { _ in
-                return .stopEngine
-            }
-        } catch {
-            print("Failed to play pattern: \(error)")
-        }
-    }
+    //    func playPattern() {
+    //        do {
+    //            let pattern = try continuousVibration()
+    //            startEngine()
+    //            let player = try engine?.makePlayer(with: pattern)
+    //            try player?.start(atTime: CHHapticTimeImmediate)
+    //            engine?.notifyWhenPlayersFinished { _ in
+    //                return .stopEngine
+    //            }
+    //        } catch {
+    //            print("Failed to play pattern: \(error)")
+    //        }
+    //    }
     private func startEngine() {
         guard engineNeedsStart, let engine = engine else { return }
         
@@ -69,69 +78,81 @@ class HapticManager {
             startEngine()
         }
     }
-    func playHapticFeedback(tuningAccuracy: Float) {
+    
+    func playHapticFeedback(tuningAccuracy: Float, currentFrequency: Float, targetFrequency: Float) {
+        let errorType: PitchError = currentFrequency < targetFrequency ? .tooLow : .tooHigh
+        
+// Throttle feedback to ensure it is not too frequent
+        let now = Date()
+        if let lastTime = lastFeedbackTime, now.timeIntervalSince(lastTime) < minFeedbackInterval {
+            return
+        }
+        lastFeedbackTime = now
+        
         // Check if the tuning accuracy is below 1
-        if tuningAccuracy < 0.75 {
-            // Schedule haptic feedback to play after a delay (e.g., 2 seconds)
+        if tuningAccuracy < 0.25 {
             print (tuningAccuracy)
-            DispatchQueue.main.async {
-                Timer.scheduledTimer(timeInterval: 2.0, target: self, selector: #selector(self.triggerHapticFeedbackSuccess), userInfo: NSNumber(value: tuningAccuracy), repeats: false)
-            }
+            triggerHapticFeedbackSuccess(tuningAccuracy:tuningAccuracy)
         } else {
-            // Trigger haptic feedback immediately if tuning accuracy is 1 or above
-            triggerHapticFeedback(tuningAccuracy: tuningAccuracy)
+            print (tuningAccuracy)
+            triggerHapticFeedback(tuningAccuracy: tuningAccuracy, errorType: errorType)
         }
     }
+    
     @objc private func triggerHapticFeedbackSuccess(tuningAccuracy: Float){
-        let systemSoundID: SystemSoundID = 1008
+        let systemSoundID: SystemSoundID = 1407
         AudioServicesPlaySystemSound(systemSoundID)
+        // Pause pitch detection
+        pitchDetector?.pauseDetection()
+        
+        // Can adjust this number. Wait for 3 seconds before resuming pitch detection
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+            self.pitchDetector?.resumeDetection()
+        }
     }
+    
+    func triggerHapticFeedback(tuningAccuracy: Float, errorType: PitchError) {
+        let intensity: Float = 1.0  // High intensity for clear feedback
+        let sharpness: Float = errorType == .tooHigh ? 0.1 : 1.0  // Less sharp for too high, sharper for too low
+        let duration: Double = errorType == .tooHigh ? 1.0 : 0.1  // Longer duration for harsh feedback when too high
 
-    private func triggerHapticFeedback(tuningAccuracy: Float) {
-        var intensity: Float = 0.5
-        var sharpness: Float = 0.5
+        //Below controls the function of how the haptic frequency is affected by tuningAccuracy
+//        let a: Double = 0.1
+//        let b: Double = pow(10, 1/10.0)  // 10th root of 10, for the steep curve
+//        let interval = max(0.1, a * pow(b, Double(tuningAccuracy)))  // Calculate interval directly
+//            //let interval = Double(1)
+        //let interval = max(0.01, min(1.0, 0.9 * (log10(Double(tuningAccuracy) + 1) / log10(10.25)) + 0.01))
+        let interval = max(0.001, min(2.0, 0.2052 * Double(tuningAccuracy) - 0.0524))  // Linear function with bounds
+        var events = [CHHapticEvent]()
+        var currentTime = 0.0
         
-        // Set intensity and sharpness based on your logic
-        intensity = 1
-        sharpness = 1
+        while currentTime < 2 {  // Generate events for 2 seconds duration
+            let hapticEvent = CHHapticEvent(eventType: .hapticContinuous, parameters: [
+                CHHapticEventParameter(parameterID: .hapticIntensity, value: intensity),
+                CHHapticEventParameter(parameterID: .hapticSharpness, value: sharpness)
+            ], relativeTime: currentTime, duration: duration)
+            
+            events.append(hapticEvent)
+            currentTime += interval
+        }
         
-        //        if tuningAccuracy < 3 {
-        //            let systemSoundID: SystemSoundID = 1008
-        //            AudioServicesPlaySystemSound(systemSoundID)
-        //        } else {
-        //            intensity = 1
-        //            sharpness = 1
-        //        }
-        var dur = 0.25
-        if (tuningAccuracy < 3) {
-            dur = 5
-        }
-        else if (tuningAccuracy < 10) {
-            dur = 4
-        }
-        else if (tuningAccuracy < 15) {
-            dur = 2
-        }
-        else if (tuningAccuracy < 20) {
-            dur = 1
-        }
-        else if (tuningAccuracy < 200) {
-            dur = 0.5
-        }
-        let hapticEvent = CHHapticEvent(eventType: .hapticContinuous, parameters: [
-            CHHapticEventParameter(parameterID: .hapticIntensity, value: intensity),
-            CHHapticEventParameter(parameterID: .hapticSharpness, value: sharpness)
-        ], relativeTime: 0, duration: Double(dur))
-
         do {
-            let pattern = try CHHapticPattern(events: [hapticEvent], parameters: [])
+            let pattern = try CHHapticPattern(events: events, parameters: [])
             let player = try engine?.makePlayer(with: pattern)
             try player?.start(atTime: 0)
         } catch {
             print("Failed to play custom haptic feedback: \(error)")
         }
+    // Schedule the pause of the pitch detector 0.5 seconds after triggering haptic feedback
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+            self.pitchDetector?.pauseDetection()
+        }
+        
+        // Schedule the resume of the pitch detector 2.5 seconds after triggering haptic feedback
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+            self.pitchDetector?.resumeDetection()
+        }
     }
-
     
     @objc func playClickFeedback() {
         //guard canPlayClickFeedback else { return }
@@ -148,45 +169,35 @@ class HapticManager {
         } catch {
             print("Failed to play click haptic feedback")
         }
-        //do {sleep(2)}
-        // Play the click feedback
-        // Ensure your engine and pattern setup code goes here
-        
-        // Disable further feedback until the cooldown period has passed
-//        canPlayClickFeedback = false
-//        feedbackCooldownTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
-//            self?.canPlayClickFeedback = true
-//        }
     }
 }
-
 @available(iOS 13.0, *)
 extension HapticManager {
-  private func basicPattern() throws -> CHHapticPattern {
-
+    private func basicPattern() throws -> CHHapticPattern {
+        
         let pattern = CHHapticEvent(
-          eventType: .hapticTransient,
-          parameters: [
-            CHHapticEventParameter(parameterID: .hapticIntensity, value: 3.0),
-            CHHapticEventParameter(parameterID: .hapticSharpness, value: 3.0)
-          ],
-          relativeTime: 1)
-
-        return try CHHapticPattern(events: [pattern], parameters: [])
-  }
-    
-    private func continuousVibration() throws -> CHHapticPattern {
-        let duration = 1000 // ms suppose
-        let hapticIntensity: Float
-        hapticIntensity = 1.0
-        let continuousVibrationEvent = CHHapticEvent(
             eventType: .hapticContinuous,
             parameters: [
-                CHHapticEventParameter(parameterID: .hapticIntensity, value: hapticIntensity)
+                CHHapticEventParameter(parameterID: .hapticIntensity, value: 1.0),
+                CHHapticEventParameter(parameterID: .hapticSharpness, value: 1.0)
             ],
-            relativeTime: 0,
-            duration: (Double(duration)/1000))
-        return try CHHapticPattern(events: [continuousVibrationEvent], parameters: [])
+            relativeTime: 0)
+        
+        return try CHHapticPattern(events: [pattern], parameters: [])
     }
-}
-
+    
+//        private func continuousVibration() throws -> CHHapticPattern {
+//            let duration = 1000 // ms suppose
+//            let hapticIntensity: Float
+//            hapticIntensity = 1.0
+//            let continuousVibrationEvent = CHHapticEvent(
+//                eventType: .hapticContinuous,
+//                parameters: [
+//                    CHHapticEventParameter(parameterID: .hapticIntensity, value: hapticIntensity)
+//                ],
+//                relativeTime: 0,
+//                duration: (Double(duration)/1000))
+//            return try CHHapticPattern(events: [continuousVibrationEvent], parameters: [])
+//        }
+    }
+    

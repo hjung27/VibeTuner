@@ -824,6 +824,7 @@
 				DEVELOPMENT_TEAM = KTL752655U;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = BuildSupport/iOS/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = VibeTuner;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -854,6 +855,7 @@
 				DEVELOPMENT_TEAM = KTL752655U;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = BuildSupport/iOS/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = VibeTuner;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
