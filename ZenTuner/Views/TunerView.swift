@@ -13,7 +13,7 @@ struct TunerView: View {
     }
 
     @AppStorage("HidesTranspositionMenu")
-    private var hidesTranspositionMenu = false
+    private var hidesTranspositionMenu = true
 
     
     var body: some View {
@@ -66,7 +66,10 @@ struct TunerView: View {
 
             Spacer()
         }
+
+
 #endif
+        
     }
 }
 

@@ -1,10 +1,3 @@
-//
-//  HapticManager.swift
-//  ZenTuner
-//
-//  Created by Hoyoung Jung on 2024-05-26.
-//
-
 import Foundation
 import CoreHaptics
 import AVFoundation
@@ -23,8 +16,10 @@ class HapticManager {
     var pitchDetector: MicrophonePitchDetector? // Reference to the pitch detector
     private let minFeedbackInterval: TimeInterval = 2  // Minimum interval between feedbacks in seconds
     
+    
     init() {
         createAndStartHapticEngine()
+        configureAudioSession()
     }
     
     private func createAndStartHapticEngine() {
@@ -48,20 +43,16 @@ class HapticManager {
         
         startEngine()
     }
-    //from stackexchange
-    //    func playPattern() {
-    //        do {
-    //            let pattern = try continuousVibration()
-    //            startEngine()
-    //            let player = try engine?.makePlayer(with: pattern)
-    //            try player?.start(atTime: CHHapticTimeImmediate)
-    //            engine?.notifyWhenPlayersFinished { _ in
-    //                return .stopEngine
-    //            }
-    //        } catch {
-    //            print("Failed to play pattern: \(error)")
-    //        }
-    //    }
+    private func configureAudioSession() {
+        let audioSession = AVAudioSession.sharedInstance()
+        do {
+            try audioSession.setCategory(.playback, mode: .default)
+            try audioSession.setActive(true)
+        } catch {
+            print("Failed to set up audio session: \(error)")
+        }
+    }
+
     private func startEngine() {
         guard engineNeedsStart, let engine = engine else { return }
         
@@ -116,12 +107,6 @@ class HapticManager {
         let sharpness: Float = errorType == .tooHigh ? 0.1 : 1.0  // Less sharp for too high, sharper for too low
         let duration: Double = errorType == .tooHigh ? 1.0 : 0.1  // Longer duration for harsh feedback when too high
 
-        //Below controls the function of how the haptic frequency is affected by tuningAccuracy
-//        let a: Double = 0.1
-//        let b: Double = pow(10, 1/10.0)  // 10th root of 10, for the steep curve
-//        let interval = max(0.1, a * pow(b, Double(tuningAccuracy)))  // Calculate interval directly
-//            //let interval = Double(1)
-        //let interval = max(0.01, min(1.0, 0.9 * (log10(Double(tuningAccuracy) + 1) / log10(10.25)) + 0.01))
         let interval = max(0.001, min(2.0, 0.2052 * Double(tuningAccuracy) - 0.0524))  // Linear function with bounds
         var events = [CHHapticEvent]()
         var currentTime = 0.0
@@ -143,12 +128,12 @@ class HapticManager {
         } catch {
             print("Failed to play custom haptic feedback: \(error)")
         }
-    // Schedule the pause of the pitch detector 0.5 seconds after triggering haptic feedback
+    // Schedule the pause of the pitch detector 0.25 seconds after triggering haptic feedback
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
             self.pitchDetector?.pauseDetection()
         }
         
-        // Schedule the resume of the pitch detector 2.5 seconds after triggering haptic feedback
+        // Schedule the resume of the pitch detector 3 seconds after triggering haptic feedback
         DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
             self.pitchDetector?.resumeDetection()
         }
@@ -185,19 +170,5 @@ extension HapticManager {
         
         return try CHHapticPattern(events: [pattern], parameters: [])
     }
-    
-//        private func continuousVibration() throws -> CHHapticPattern {
-//            let duration = 1000 // ms suppose
-//            let hapticIntensity: Float
-//            hapticIntensity = 1.0
-//            let continuousVibrationEvent = CHHapticEvent(
-//                eventType: .hapticContinuous,
-//                parameters: [
-//                    CHHapticEventParameter(parameterID: .hapticIntensity, value: hapticIntensity)
-//                ],
-//                relativeTime: 0,
-//                duration: (Double(duration)/1000))
-//            return try CHHapticPattern(events: [continuousVibrationEvent], parameters: [])
-//        }
-    }
+}
     

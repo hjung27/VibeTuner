@@ -38,11 +38,6 @@ struct TunerScreen: View {
         .alert(isPresented: $pitchDetector.showMicrophoneAccessAlert) {
             MicrophoneAccessAlert()
         }
-//        .task {
-//            hapticManager.restartEngineIfNeeded()
-//            // TODO: Handle error
-//            hapticManager.playHapticFeedback(tuningAccuracy: 8)
-//            }
         }
     }
 
