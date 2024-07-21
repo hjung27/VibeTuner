@@ -19,7 +19,6 @@ class HapticManager {
     
     init() {
         createAndStartHapticEngine()
-        configureAudioSession()
     }
     
     private func createAndStartHapticEngine() {
@@ -43,15 +42,7 @@ class HapticManager {
         
         startEngine()
     }
-    private func configureAudioSession() {
-        let audioSession = AVAudioSession.sharedInstance()
-        do {
-            try audioSession.setCategory(.playback, mode: .default)
-            try audioSession.setActive(true)
-        } catch {
-            print("Failed to set up audio session: \(error)")
-        }
-    }
+    
 
     private func startEngine() {
         guard engineNeedsStart, let engine = engine else { return }
