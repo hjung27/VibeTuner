@@ -1,8 +1,4 @@
 //
-//  LICENSE.swift
-//  Zen Tuner
-//
-//  Created by Hoyoung Jung on 2024-07-21.
 //
 
 //This project makes use of code from the following third-party libraries:
